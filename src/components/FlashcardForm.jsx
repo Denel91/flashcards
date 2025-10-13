@@ -45,13 +45,13 @@ export default function FlashcardForm({ flashcard, onSave, onCancel, isSaving })
                 <form onSubmit={handleSubmit}>
                     {/* Campo Quesito */}
                     <div className="mb-6">
-                        <label className="block text-gray-700 font-semibold mb-2">
+                        <label className="block text-gray-800 font-semibold mb-2">
                             Quesito *
                         </label>
                         <textarea
                             value={question}
                             onChange={(e) => setQuestion(e.target.value)}
-                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
                             rows="6"
                             placeholder="Inserisci il quesito giuridico..."
                             required
@@ -61,13 +61,13 @@ export default function FlashcardForm({ flashcard, onSave, onCancel, isSaving })
 
                     {/* Campo Risposta */}
                     <div className="mb-6">
-                        <label className="block text-gray-700 font-semibold mb-2">
+                        <label className="block text-gray-800 font-semibold mb-2">
                             Risposta *
                         </label>
                         <textarea
                             value={answer}
                             onChange={(e) => setAnswer(e.target.value)}
-                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
                             rows="10"
                             placeholder="Inserisci la risposta..."
                             required
