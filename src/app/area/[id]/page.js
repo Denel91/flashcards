@@ -1,22 +1,27 @@
 'use client';
 
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import {useParams, useRouter} from 'next/navigation';
 import Flashcard from '@/components/Flashcard';
 import FlashcardForm from '@/components/FlashcardForm';
+import AreaStats from '@/components/AreaStats';
+import toast from 'react-hot-toast';
 import {
     getFlashcards,
     createFlashcard,
     updateFlashcard,
-    deleteFlashcard
+    deleteFlashcard,
+    updateFlashcardStats,
+    getAreaStats,
 } from '@/lib/flashcardService';
 
 export default function AreaPage() {
     const params = useParams();
     const router = useRouter();
-    const areaId = params.id;
+    const areaId = params.id; // 'civile', 'amministrativo', o 'penale'
 
     const [flashcards, setFlashcards] = useState([]);
+    const [stats, setStats] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [editingCard, setEditingCard] = useState(null);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -48,9 +53,33 @@ export default function AreaPage() {
 
     const currentArea = areaConfig[areaId] || areaConfig.civile;
 
+    const loadFlashcards = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const cards = await getFlashcards(areaId);
+            setFlashcards(cards);
+        } catch (error) {
+            console.error('Errore caricamento flashcards:', error);
+            toast.error('Errore nel caricamento delle flashcards');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [areaId]);
+
+    // Carica le statistiche
+    const loadStats = useCallback(async () => {
+        try {
+            const statsData = await getAreaStats(areaId);
+            setStats(statsData);
+        } catch (error) {
+            console.error('Errore caricamento statistiche:', error);
+        }
+    }, [areaId]);
+
     useEffect(() => {
         loadFlashcards();
-    }, [areaId]);
+        loadStats();
+    }, [loadFlashcards, loadStats]);
 
     // Navigazione con tastiera
     useEffect(() => {
@@ -63,43 +92,79 @@ export default function AreaPage() {
                 return;
             }
 
-            if (e.key === 'ArrowRight') handleNext();
-            if (e.key === 'ArrowLeft') handlePrevious();
+            const target = e.target;
+            const tag = target?.tagName?.toLowerCase();
+            const isTyping = tag === 'input' || tag === 'textarea' || target?.isContentEditable;
+            if (isTyping) return;
+
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                setCurrentIndex((prev) => Math.min(prev + 1, flashcards.length - 1));
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setCurrentIndex((prev) => Math.max(prev - 1, 0));
+            }
         };
 
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [currentIndex, flashcards.length, showForm]);
+    }, [showForm, flashcards.length]);
 
-    const loadFlashcards = async () => {
-        try {
-            setIsLoading(true);
-            const cards = await getFlashcards(areaId);
-            setFlashcards(cards);
-        } catch (error) {
-            console.error('Errore caricamento:', error);
-            alert('Errore nel caricamento');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleSave = async (question, answer) => {
+    // Gestisci creazione/modifica flashcard
+    const handleSubmitFlashcard = async (question, answer) => {
         try {
             setIsSaving(true);
 
-            if (editingCard?.id) {
+            if (editingCard) {
+                // MODIFICA: Aggiorna localmente prima del salvataggio
+                const updatedCard = { ...editingCard, question, answer };
+
+                setFlashcards(prev =>
+                    prev.map(card => card.id === editingCard.id ? updatedCard : card)
+                );
+
+                // Poi salva sul database
                 await updateFlashcard(editingCard.id, question, answer);
+                toast.success('Flashcard aggiornata!');
             } else {
-                await createFlashcard(areaId, question, answer);
+                // CREAZIONE: Aggiungi localmente con ID temporaneo
+                const tempId = `temp-${Date.now()}`;
+                const newCard = {
+                    id: tempId,
+                    area: areaId,
+                    question: question.trim(),
+                    answer: answer.trim(),
+                    created_at: new Date().toISOString(),
+                    studied_count: 0,
+                    correct_count: 0,
+                    review_count: 0,
+                    last_studied: null
+                };
+
+                // Aggiungi subito alla lista
+                setFlashcards(prev => [newCard, ...prev]);
+
+                // Salva sul database e ottieni l'ID reale
+                const savedCard = await createFlashcard(areaId, question, answer);
+
+                // Sostituisci l'ID temporaneo con quello reale
+                setFlashcards(prev =>
+                    prev.map(card => card.id === tempId ? savedCard : card)
+                );
+
+                toast.success('Flashcard creata con successo!');
             }
 
-            await loadFlashcards();
+            // Ricarica solo le statistiche
+            await loadStats();
+
             setShowForm(false);
             setEditingCard(null);
         } catch (error) {
-            console.error('Errore salvataggio:', error);
-            alert('Errore nel salvataggio');
+            console.error('Errore salvataggio flashcard:', error);
+            toast.error('Errore nel salvataggio');
+            // In caso di errore, ricarica tutto per sicurezza
+            await loadFlashcards();
         } finally {
             setIsSaving(false);
         }
@@ -112,31 +177,83 @@ export default function AreaPage() {
 
     const handleDelete = async (id) => {
         try {
+            // Rimuovi subito dall'UI
+            setFlashcards(prev => prev.filter(card => card.id !== id));
+
             setIsDeleting(true);
+
+            // Elimina dal database
             await deleteFlashcard(id);
-            await loadFlashcards();
+            await loadStats();
+
+            toast.success('Flashcard eliminata');
 
             if (currentIndex >= flashcards.length - 1 && currentIndex > 0) {
                 setCurrentIndex(currentIndex - 1);
             }
         } catch (error) {
             console.error('Errore eliminazione:', error);
-            alert('Errore nell\'eliminazione');
+            toast.error('Errore nell\'eliminazione');
+
+            // Ricarica in caso di errore
+            await loadFlashcards();
         } finally {
             setIsDeleting(false);
         }
     };
 
-    const handleNext = () => {
-        if (currentIndex < flashcards.length - 1) {
-            setCurrentIndex(currentIndex + 1);
+    const handleStudied = async (id, isCorrect) => {
+        try {
+
+            // 1) Update ottimistico della card nello stato
+            const nowISO = new Date().toISOString();
+            setFlashcards(prev => prev.map(card =>
+                card.id === id
+                    ? {
+                        ...card,
+                        studied_count: (card.studied_count || 0) + 1,
+                        correct_count: (card.correct_count || 0) + (isCorrect ? 1 : 0),
+                        review_count: !isCorrect ? (card.review_count || 0) + 1 : 0,
+                        last_studied: nowISO,
+                    }
+                    : card
+            ));
+
+            // 2) Aggiorna il backend (senza bloccare l'UI con loading globale)
+            await updateFlashcardStats(id, isCorrect);
+
+            // 3) Aggiorna solo le statistiche (opzionale). In alternativa, puoi aggiornarle localmente.
+            await loadStats();
+
+            // 4) Feedback utente
+            if (isCorrect) {
+                toast.success('Conoscevi la risposta! 🎉');
+            } else {
+                toast('Da rivedere 📚', { icon: '💡', duration: 1000 });
+            }
+        } catch (error) {
+            console.error('Errore aggiornamento statistiche:', error);
+            toast.error("Errore nell'aggiornamento");
+            // fallback: ricarica tutto solo in caso di errore
+            await loadFlashcards();
+            await loadStats();
         }
     };
 
-    const handlePrevious = () => {
-        if (currentIndex > 0) {
-            setCurrentIndex(currentIndex - 1);
+    const handleNext = useCallback(() => {
+        setCurrentIndex((prev) => Math.min(prev + 1, flashcards.length - 1));
+    }, [flashcards.length]);
+
+    const handlePrevious = useCallback(() => {
+        setCurrentIndex((prev) => Math.max(prev - 1, 0));
+    }, []);
+
+    // Gestisci apertura/chiusura form
+    const handleToggleForm = () => {
+        if (showForm) {
+            setEditingCard(null);
         }
+        setShowForm(!showForm);
     };
 
     // Loading moderno
@@ -164,9 +281,11 @@ export default function AreaPage() {
                             <span>Torna alla Home</span>
                         </button>
 
-                        <button onClick={() => setShowForm(true)} className={`group bg-gradient-to-r ${currentArea.gradient} text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2`}>
-                            <span className="text-xl group-hover:rotate-90 transition-transform duration-200">+</span>
-                            <span>Nuova Flashcard</span>
+                        <button onClick={handleToggleForm} className={`group bg-gradient-to-r ${currentArea.gradient} text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2`}>
+                            <span className="text-xl group-hover:rotate-90 transition-transform duration-200">
+                                {showForm ? '✖' : '+'}
+                            </span>
+                            <span>{showForm ? 'Chiudi' : 'Nuova Flashcard'}</span>
                         </button>
                     </div>
 
@@ -209,7 +328,7 @@ export default function AreaPage() {
                             <div className="text-6xl mb-4">📝</div>
                             <p className="text-2xl mb-6 text-gray-700 font-semibold">Nessuna flashcard</p>
                             <p className="text-gray-600 mb-8">Inizia creando la tua prima flashcard per studiare!</p>
-                            <button onClick={() => setShowForm(true)} className={`bg-gradient-to-r ${currentArea.gradient} text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200`}>
+                            <button onClick={handleToggleForm} className={`bg-gradient-to-r ${currentArea.gradient} text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200`}>
                                 ✨ Crea la prima flashcard
                             </button>
                         </div>
@@ -222,6 +341,7 @@ export default function AreaPage() {
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
                                 isDeleting={isDeleting}
+                                onStudied={handleStudied}
                             />
                         </div>
 
@@ -253,13 +373,16 @@ export default function AreaPage() {
                         </div>
 
                         {/* Hint per tastiera */}
-                        <div className="text-center mt-6">
+                        <div className="text-center mt-6 mb-6">
                             <p className="text-sm text-gray-500">
                                 💡 Usa le frecce ← → per navigare
                             </p>
                         </div>
                     </div>
                 )}
+
+                {/* Statistiche */}
+                {stats && <AreaStats stats={stats} />}
 
                 {/* Form modale con animazione */}
                 {showForm && (
@@ -272,7 +395,7 @@ export default function AreaPage() {
                         <div className="relative z-10">
                             <FlashcardForm
                                 flashcard={editingCard}
-                                onSave={handleSave}
+                                onSave={handleSubmitFlashcard}
                                 onCancel={() => {
                                     setShowForm(false);
                                     setEditingCard(null);

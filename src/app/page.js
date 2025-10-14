@@ -40,6 +40,16 @@ export default function Home() {
         }
     ];
 
+    const globalStatsCard = {
+        id: 'global-stats',
+        title: 'Statistiche Globali',
+        description: 'Visualizza le statistiche di tutte le aree',
+        icon: '/globe.svg',
+        gradient: 'from-gray-400 via-gray-500 to-gray-600',
+        hoverGradient: 'hover:from-gray-500 hover:via-gray-600 hover:to-gray-700',
+        link: '/global-stats'
+    };
+
     useEffect(() => {
         loadCounts();
     }, []);
@@ -151,6 +161,14 @@ export default function Home() {
                             </div>
                         </Link>
                     ))}
+                </div>
+
+                {/* Bottone compatto per le statistiche globali */}
+                <div className="flex justify-center mt-8">
+                    <Link href={globalStatsCard.link} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 hover:shadow-md transition-all duration-200">
+                        <Image src={globalStatsCard.icon} alt={globalStatsCard.title} width={24} height={24} />
+                        <span>Statistiche Globali</span>
+                    </Link>
                 </div>
 
                 {/* Sezione informativa aggiuntiva */}
