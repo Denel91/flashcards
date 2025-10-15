@@ -60,9 +60,10 @@ export default function GlobalStatsClient() {
         reviewCards: acc.reviewCards + areaStats.reviewCards,
     }), { totalCards: 0, studiedCards: 0, totalStudies: 0, totalCorrect: 0, reviewCards: 0 });
 
-    const globalAccuracy = globalTotals.totalStudies > 0
-        ? ((globalTotals.totalCorrect / globalTotals.totalStudies) * 100).toFixed(1)
-        : 0;
+    const globalAccuracy = globalTotals.totalStudies > 0 ? ((globalTotals.totalCorrect / globalTotals.totalStudies) * 100).toFixed(1) : 0;
+    const globalCorrect = globalTotals.totalCorrect;
+    const globalWrong = Math.max(0, globalTotals.totalStudies - globalTotals.totalCorrect);
+    const globalStudiesPerCard = globalTotals.totalCards > 0 ? (globalTotals.totalStudies / globalTotals.totalCards).toFixed(2) : 0;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
@@ -88,7 +89,7 @@ export default function GlobalStatsClient() {
                 </div>
 
                 {/* Metriche Globali */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                         <div className="text-sm font-medium text-gray-500 mb-1">Flashcard Totali</div>
                         <div className="text-3xl font-bold text-blue-600">{globalTotals.totalCards}</div>
@@ -102,8 +103,20 @@ export default function GlobalStatsClient() {
                         <div className="text-3xl font-bold text-red-500">{globalTotals.reviewCards}</div>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                        <div className="text-sm font-medium text-gray-500 mb-1">Risposte corrette</div>
+                        <div className="text-3xl font-bold text-green-600">{globalCorrect}</div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                        <div className="text-sm font-medium text-gray-500 mb-1">Risposte errate</div>
+                        <div className="text-3xl font-bold text-red-600">{globalWrong}</div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                         <div className="text-sm font-medium text-gray-500 mb-1">Sessioni</div>
                         <div className="text-3xl font-bold text-purple-600">{globalTotals.totalStudies}</div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                        <div className="text-sm font-medium text-gray-500 mb-1">Studi per carta</div>
+                        <div className="text-3xl font-bold text-sky-600">{globalStudiesPerCard}</div>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                         <div className="text-sm font-medium text-gray-500 mb-1">Precisione</div>
@@ -133,6 +146,12 @@ export default function GlobalStatsClient() {
                                         Da Rivedere
                                     </th>
                                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Risposte corrette
+                                    </th>
+                                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Risposte errate
+                                    </th>
+                                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Sessioni
                                     </th>
                                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -146,63 +165,28 @@ export default function GlobalStatsClient() {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {Object.entries(stats).map(([areaKey, areaStats]) => {
                                     const config = areaConfig[areaKey];
-
+                                    const correct = areaStats.totalCorrect || 0;
+                                    const wrong = Math.max(0, (areaStats.totalStudies || 0) - correct);
                                     const progress = areaStats.totalCards > 0
-                                        ? ((areaStats.studiedCards / areaStats.totalCards) * 100).toFixed(0)
+                                        ? Math.min(100, Math.round((areaStats.studiedCards / areaStats.totalCards) * 100))
                                         : 0;
 
                                     return (
                                         <tr key={areaKey} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-2xl">{config.icon}</span>
-                                                    <div>
-                                                        <div className="text-sm font-semibold text-gray-900">{config.name}</div>
-                                                    </div>
-                                                </div>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center gap-2">
+                                                <span className="text-xl">{config.icon}</span>
+                                                {config.name}
                                             </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                                    {areaStats.totalCards}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                                                    {areaStats.studiedCards}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                {areaStats.reviewCards > 0 ? (
-                                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                                                        {areaStats.reviewCards}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400 text-sm">0</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="text-sm font-medium text-gray-900">{areaStats.totalStudies}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <span className={`text-sm font-bold ${
-                                                        areaStats.accuracy >= 80 ? 'text-green-600' :
-                                                        areaStats.accuracy >= 60 ? 'text-orange-600' :
-                                                        'text-red-600'
-                                                    }`}>
-                                                        {areaStats.accuracy}%
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                                                        <div
-                                                            className={`h-full bg-gradient-to-r ${config.color} transition-all duration-500`}
-                                                            style={{ width: `${progress}%` }}
-                                                        ></div>
-                                                    </div>
-                                                    <span className="text-xs font-medium text-gray-600 w-10 text-right">{progress}%</span>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-blue-600 font-bold">{areaStats.totalCards}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-green-600 font-bold">{areaStats.studiedCards}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-red-500 font-bold">{areaStats.reviewCards}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-green-600 font-bold">{correct}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-red-600 font-bold">{wrong}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-purple-600 font-bold">{areaStats.totalStudies}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-orange-600 font-bold">{areaStats.accuracy}%</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                                                <div className="w-full bg-gray-200 rounded-full h-3">
+                                                    <div className={`h-3 rounded-full bg-gradient-to-r ${config.color}`} style={{ width: `${progress}%` }}></div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -222,6 +206,8 @@ export default function GlobalStatsClient() {
                         const progress = areaStats.totalCards > 0
                             ? ((areaStats.studiedCards / areaStats.totalCards) * 100).toFixed(0)
                             : 0;
+                        const correct = areaStats.totalCorrect || 0;
+                        const wrong = Math.max(0, (areaStats.totalStudies || 0) - correct);
 
                         return (
                             <div key={areaKey} className={`bg-white rounded-xl shadow-sm border ${config.borderColor} overflow-hidden hover:shadow-md transition-shadow`}>
@@ -269,6 +255,14 @@ export default function GlobalStatsClient() {
                                             }`}>
                                                 {areaStats.accuracy}%
                                             </div>
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-3">
+                                            <div className="text-xs text-gray-500 mb-1">Risposte corrette</div>
+                                            <div className="text-xl font-bold text-green-600">{correct}</div>
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-3">
+                                            <div className="text-xs text-gray-500 mb-1">Risposte errate</div>
+                                            <div className="text-xl font-bold text-red-600">{wrong}</div>
                                         </div>
                                     </div>
                                 </div>

@@ -96,6 +96,76 @@ Prima di iniziare, assicurati di avere installato:
 - **Git** ([Download](https://git-scm.com/))
 - Un account **Supabase** gratuito ([Registrati](https://supabase.com/))
 
+## 🚀 Installazione e Avvio Locale
+
+1. **Clona il repository:**
+   ```bash
+   git clone https://github.com/tuo-username/flashcards-giuridiche.git
+   cd flashcards-giuridiche
+   ```
+2. **Installa le dipendenze:**
+   ```bash
+   npm install
+   ```
+3. **Configura Supabase:**
+   - Crea un progetto su [Supabase](https://supabase.com/)
+   - Copia le chiavi API e l'URL del progetto
+   - Crea un file `.env.local` nella root con:
+     ```env
+     NEXT_PUBLIC_SUPABASE_URL=la-tua-url-supabase
+     NEXT_PUBLIC_SUPABASE_ANON_KEY=la-tua-anon-key
+     ```
+4. **Avvia il server di sviluppo:**
+   ```bash
+   npm run dev
+   ```
+   L'app sarà disponibile su [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 🗂️ Struttura del Progetto
+
+```
+flashcards/
+├── public/                # Immagini e asset statici
+├── src/
+│   ├── app/               # Routing Next.js
+│   │   ├── area/[id]/     # Pagine area di studio
+│   │   ├── global-stats/  # Statistiche globali
+│   ├── components/        # Componenti React riutilizzabili
+│   ├── lib/               # Servizi e utilità (Supabase, flashcardService)
+├── package.json           # Dipendenze e script
+├── README.md              # Documentazione
+```
+
+---
+
+## 🧩 Componenti Principali
+
+- `Flashcard.jsx` - Card interattiva con animazione flip
+- `FlashcardForm.jsx` - Form per creare/modificare flashcard
+- `AreaStats.jsx` - Statistiche per area di studio
+- `GlobalStatsClient.jsx` - Statistiche globali aggregate
+- `StatCard.jsx` - Card per visualizzare metriche
+- `Footer.jsx` - Footer informativo
+
+---
+
+## 📊 Novità e Funzionalità Recenti
+
+- **Pagina Statistiche Globali**: Visualizza metriche aggregate su tutte le aree di studio (`/global-stats`)
+- **Componenti StatCard e GlobalStatsClient**: Nuovi componenti per visualizzare dati statistici
+- **Miglioramenti UI/UX**: Animazioni, feedback visivi, modali migliorate
+- **Validazione avanzata**: Form con validazione in tempo reale
+
+---
+
+## ⚙️ Configurazione Supabase
+
+Assicurati di aver configurato correttamente le variabili ambiente nel file `.env.local` come indicato sopra. Consulta la documentazione ufficiale Supabase per la gestione delle tabelle e delle policy di sicurezza.
+
+---
+
 ## 📞 Supporto e Contatti
 
 <div align="center">
@@ -139,4 +209,3 @@ Questo progetto è rilasciato sotto licenza **MIT**. Vedi il file [LICENSE.MD](.
 **⭐ Se questo progetto ti è utile, lascia una stella su GitHub!**
 
 **📚 Buono studio con le tue flashcards giuridiche!**
-
