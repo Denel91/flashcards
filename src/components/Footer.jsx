@@ -139,7 +139,7 @@ export default function Footer() {
                             <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200 text-sm">
                                 Termini di Servizio
                             </a>
-                            <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200 text-sm">
+                            <a href="/contacts" className="text-gray-400 hover:text-white transition-colors duration-200 text-sm">
                                 Contatti
                             </a>
                         </div>
