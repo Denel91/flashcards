@@ -405,7 +405,7 @@ export default function AreaPage() {
                                 </div>
 
                                 <div className="text-center sm:text-left">
-                                    <h1 className={`text-2xl sm:text-4xl md:text-6xl font-extrabold leading-tight bg-gradient-to-r ${currentArea.gradient} bg-clip-text text-transparent`}>
+                                    <h1 className={`text-3xl sm:text-4xl md:text-6xl font-extrabold leading-tight bg-gradient-to-r ${currentArea.gradient} bg-clip-text text-transparent`}>
                                         {currentArea.name}
                                     </h1>
                                     <p className="mt-1 text-sm sm:text-base text-gray-600">Area di studio — carte, statistiche e ripasso</p>
