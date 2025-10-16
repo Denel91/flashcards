@@ -2,6 +2,7 @@
 
 import {useState, useEffect, useCallback, useRef} from 'react';
 import {useParams, useRouter} from 'next/navigation';
+import Image from 'next/image';
 import Flashcard from '@/components/Flashcard';
 import FlashcardForm from '@/components/FlashcardForm';
 import AreaStats from '@/components/AreaStats';
@@ -42,20 +43,23 @@ export default function AreaPage() {
     const areaConfig = {
         civile: {
             name: 'Diritto Civile',
-            icon: '⚖️',
+            icon: '/balance.png',
+            iconAlt: 'Bilancia della giustizia',
             gradient: 'from-red-500 to-orange-500',
             bgGradient: 'from-red-50 to-orange-50'
         },
         amministrativo: {
             name: 'Diritto Amministrativo',
-            icon: '🏛️',
+            icon: '/courthouse.png',
+            iconAlt: 'Edificio tribunale',
             gradient: 'from-blue-500 to-cyan-500',
             bgGradient: 'from-blue-50 to-cyan-50'
 
         },
         penale: {
             name: 'Diritto Penale',
-            icon: '⚔️',
+            icon: '/gavel.png',
+            iconAlt: 'Martelletto del giudice',
             gradient: 'from-green-500 to-emerald-500',
             bgGradient: 'from-green-50 to-emerald-50'
         }
@@ -386,11 +390,27 @@ export default function AreaPage() {
 
                     {/* Titolo con icona */}
                     <div className="text-center">
-                        <div className="inline-flex items-center gap-4 mb-4">
-                            <span className="text-6xl">{currentArea.icon}</span>
-                            <h1 className={`text-6xl font-bold bg-gradient-to-r ${currentArea.gradient} bg-clip-text text-transparent`}>
-                                {currentArea.name}
-                            </h1>
+                        <div className="mb-4">
+                            <div className="flex flex-col sm:flex-row items-center sm:items-end justify-center gap-3 sm:gap-6">
+                                <div className="flex-shrink-0 flex items-center justify-center rounded-full bg-white/20 p-3 sm:p-4">
+                                    {/* Icona area: immagine responsive dalla cartella public */}
+                                    <Image
+                                        src={currentArea.icon}
+                                        alt={currentArea.iconAlt || currentArea.name}
+                                        width={64}
+                                        height={64}
+                                        className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain"
+                                        priority
+                                    />
+                                </div>
+
+                                <div className="text-center sm:text-left">
+                                    <h1 className={`text-2xl sm:text-4xl md:text-6xl font-extrabold leading-tight bg-gradient-to-r ${currentArea.gradient} bg-clip-text text-transparent`}>
+                                        {currentArea.name}
+                                    </h1>
+                                    <p className="mt-1 text-sm sm:text-base text-gray-600">Area di studio — carte, statistiche e ripasso</p>
+                                </div>
+                            </div>
                         </div>
 
                         {flashcards.length > 0 && (
