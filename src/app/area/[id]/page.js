@@ -1,6 +1,6 @@
 'use client';
 
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useRef} from 'react';
 import {useParams, useRouter} from 'next/navigation';
 import Flashcard from '@/components/Flashcard';
 import FlashcardForm from '@/components/FlashcardForm';
@@ -28,6 +28,16 @@ export default function AreaPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // --- NEW: ref del container principale (per attaccare listener touch in modo robusto) ---
+    const mainRef = useRef(null);
+
+    // --- Nuove funzionalità mobile: swipe refs (spostate prima del return per rispettare le regole hooks) ---
+    const touchStartX = useRef(null);
+    const touchStartY = useRef(null);
+    const lastTouchX = useRef(null);
+    const lastTouchY = useRef(null);
+    const isTouchMoving = useRef(false);
 
     const areaConfig = {
         civile: {
@@ -80,6 +90,89 @@ export default function AreaPage() {
         loadFlashcards();
         loadStats();
     }, [loadFlashcards, loadStats]);
+
+    // --- Nuove funzionalità mobile: swipe (spostato prima del return) ---
+    useEffect(() => {
+        if (flashcards.length === 0) return;
+
+        const container = mainRef.current || window;
+        if (!container || !container.addEventListener) return;
+
+        const handleTouchStart = (e) => {
+            if (showForm) return; // non interpretare swipe se il form è aperto
+            if (!e.touches || e.touches.length === 0) return;
+            const t = e.touches[0];
+            touchStartX.current = t.clientX;
+            touchStartY.current = t.clientY;
+            lastTouchX.current = t.clientX;
+            lastTouchY.current = t.clientY;
+            isTouchMoving.current = false;
+        };
+
+        const handleTouchMove = (e) => {
+            if (showForm) return;
+            if (!e.touches || e.touches.length === 0) return;
+            const t = e.touches[0];
+            lastTouchX.current = t.clientX;
+            lastTouchY.current = t.clientY;
+            // Se il movimento supera una piccola soglia consideralo movimento (evita click tap interpretati come swipe)
+            const dx = Math.abs(lastTouchX.current - touchStartX.current);
+            const dy = Math.abs(lastTouchY.current - touchStartY.current);
+            if (dx > 5 || dy > 5) isTouchMoving.current = true;
+        };
+
+        const handleTouchEnd = (e) => {
+            if (showForm) return; // non interpretare swipe se il form è aperto
+            // Usa lastTouch* se disponibili
+            if (touchStartX.current == null) return;
+
+            const endX = (lastTouchX.current != null) ? lastTouchX.current : (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientX);
+            const endY = (lastTouchY.current != null) ? lastTouchY.current : (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientY);
+            if (endX == null || endY == null) {
+                touchStartX.current = null;
+                touchStartY.current = null;
+                lastTouchX.current = null;
+                lastTouchY.current = null;
+                isTouchMoving.current = false;
+                return;
+            }
+
+            const deltaX = endX - touchStartX.current;
+            const deltaY = endY - touchStartY.current;
+
+            // Considera solo swipe orizzontali significativi e solo se c'è stato movimento
+            if (isTouchMoving.current && Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                if (deltaX < 0) {
+                    // swipe left -> next
+                    setCurrentIndex(prev => Math.min(prev + 1, flashcards.length - 1));
+                } else {
+                    // swipe right -> previous
+                    setCurrentIndex(prev => Math.max(prev - 1, 0));
+                }
+            }
+
+            touchStartX.current = null;
+            touchStartY.current = null;
+            lastTouchX.current = null;
+            lastTouchY.current = null;
+            isTouchMoving.current = false;
+        };
+
+        // Attacca listener al container determinato
+        container.addEventListener('touchstart', handleTouchStart, {passive: true});
+        container.addEventListener('touchmove', handleTouchMove, {passive: true});
+        container.addEventListener('touchend', handleTouchEnd, {passive: true});
+
+        return () => {
+            try {
+                container.removeEventListener('touchstart', handleTouchStart);
+                container.removeEventListener('touchmove', handleTouchMove);
+                container.removeEventListener('touchend', handleTouchEnd);
+            } catch (err) {
+                // ignore cleanup errors
+            }
+        };
+    }, [flashcards.length, showForm]);
 
     // Navigazione con tastiera
     useEffect(() => {
@@ -177,8 +270,13 @@ export default function AreaPage() {
 
     const handleDelete = async (id) => {
         try {
-            // Rimuovi subito dall'UI
-            setFlashcards(prev => prev.filter(card => card.id !== id));
+            // Rimuovi subito dall'UI e aggiorna currentIndex in funzione della nuova lunghezza
+            setFlashcards(prev => {
+                const next = prev.filter(card => card.id !== id);
+                // Aggiorna currentIndex in modo funzionale basandosi sulla nuova lunghezza
+                setCurrentIndex(idx => Math.min(idx, Math.max(0, next.length - 1)));
+                return next;
+            });
 
             setIsDeleting(true);
 
@@ -188,9 +286,6 @@ export default function AreaPage() {
 
             toast.success('Flashcard eliminata');
 
-            if (currentIndex >= flashcards.length - 1 && currentIndex > 0) {
-                setCurrentIndex(currentIndex - 1);
-            }
         } catch (error) {
             console.error('Errore eliminazione:', error);
             toast.error('Errore nell\'eliminazione');
@@ -240,13 +335,13 @@ export default function AreaPage() {
         }
     };
 
-    const handleNext = useCallback(() => {
-        setCurrentIndex((prev) => Math.min(prev + 1, flashcards.length - 1));
-    }, [flashcards.length]);
+    const handleNext = () => {
+        setCurrentIndex(prev => Math.min(prev + 1, flashcards.length - 1));
+    };
 
-    const handlePrevious = useCallback(() => {
-        setCurrentIndex((prev) => Math.max(prev - 1, 0));
-    }, []);
+    const handlePrevious = () => {
+        setCurrentIndex(prev => Math.max(prev - 1, 0));
+    };
 
     // Gestisci apertura/chiusura form
     const handleToggleForm = () => {
@@ -272,7 +367,7 @@ export default function AreaPage() {
 
     return (
         <div className={`min-h-screen bg-gradient-to-br ${currentArea.bgGradient} transition-all duration-500`}>
-            <div className="container mx-auto px-4 py-8 max-w-6xl">
+            <div ref={mainRef} className="container mx-auto px-4 py-8 max-w-6xl">
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex justify-between items-center mb-6">
@@ -345,8 +440,8 @@ export default function AreaPage() {
                             />
                         </div>
 
-                        {/* Navigazione Migliorata */}
-                        <div className="flex justify-center items-center gap-6 mt-8">
+                        {/* Navigazione Migliorata per desktop/tablet (nascosta su mobile) */}
+                        <div className="hidden md:flex justify-center items-center gap-6 mt-8">
                             <button
                                 onClick={handlePrevious}
                                 disabled={currentIndex === 0}
@@ -370,6 +465,34 @@ export default function AreaPage() {
                                 <span>Successiva</span>
                                 <span className="group-hover:transform group-hover:translate-x-1 transition-transform">→</span>
                             </button>
+                        </div>
+
+                        {/* Navigazione mobile: sticky bottom, compatta, con barra di progresso */}
+                        <div className="md:hidden fixed bottom-6 left-4 right-4 z-40">
+                            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg px-3 py-3 flex items-center justify-between gap-3">
+                                <button
+                                    onClick={handlePrevious}
+                                    disabled={currentIndex === 0}
+                                    className={`flex items-center justify-center w-12 h-12 rounded-lg text-white font-semibold ${currentIndex === 0 ? 'bg-gray-300' : `bg-gradient-to-r ${currentArea.gradient}`} disabled:opacity-50`}
+                                >
+                                    ←
+                                </button>
+
+                                <div className="flex-1 px-3">
+                                    <div className="text-center text-sm text-gray-700 font-medium">{currentIndex + 1} / {flashcards.length}</div>
+                                    <div className="w-full h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                                        <div className={`h-full bg-gradient-to-r ${currentArea.gradient} rounded-full transition-all duration-300`} style={{width: `${progressPercentage}%`}} />
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleNext}
+                                    disabled={currentIndex === flashcards.length - 1}
+                                    className={`flex items-center justify-center w-12 h-12 rounded-lg text-white font-semibold ${currentIndex === flashcards.length - 1 ? 'bg-gray-300' : `bg-gradient-to-r ${currentArea.gradient}`} disabled:opacity-50`}
+                                >
+                                    →
+                                </button>
+                            </div>
                         </div>
 
                         {/* Hint per tastiera */}
