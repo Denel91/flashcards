@@ -2,7 +2,7 @@
 
 Un'applicazione web moderna e interattiva per studiare il diritto attraverso flashcards organizzate per materia. Costruita con **Next.js 15**, **React 19**, **Tailwind CSS** e **Supabase**.
 
-![Next.js](https://img.shields.io/badge/Next.js-15.5.4-black?style=flat-square&logo=next.js)
+![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19.2.0-blue?style=flat-square&logo=react)
 ![Supabase](https://img.shields.io/badge/Supabase-2.75.0-green?style=flat-square&logo=supabase)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1-38B2AC?style=flat-square&logo=tailwind-css)
