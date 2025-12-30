@@ -69,7 +69,7 @@ Un'applicazione web moderna e interattiva per studiare il diritto attraverso fla
 ### Frontend
 | Tecnologia | Versione | Scopo |
 |------------|----------|-------|
-| **Next.js** | 15.5.4   | Framework React con SSR e App Router |
+| **Next.js** | 16.1.1   | Framework React con SSR e App Router |
 | **React** | 19.2.0   | Libreria UI con hooks e componenti |
 | **Tailwind CSS** | 4.1      | Framework CSS utility-first |
 | **ESLint** | Latest   | Linting e code quality |
